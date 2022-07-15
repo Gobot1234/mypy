@@ -581,6 +581,11 @@ if sys.version_info >= (3, 10):
 else:
     def NewType(name: str, tp: Any) -> Any: ...
 
+if sys.version_info >= (3, 11):
+    # Self is also a (non-subscriptable) special form.
+    ...
+Self: object = ...
+
 # These type variables are used by the container types.
 _S = TypeVar("_S")
 _KT = TypeVar("_KT")  # Key type.

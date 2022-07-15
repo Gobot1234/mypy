@@ -6,7 +6,7 @@ from mypy.types import (
     TupleType, TypedDictType, ErasedType, UnionType, PartialType, DeletedType,
     UninhabitedType, TypeType, TypeOfAny, Overloaded, FunctionLike, LiteralType,
     ProperType, get_proper_type, get_proper_types, TypeAliasType, TypeGuardedType,
-    ParamSpecType, Parameters, UnpackType, TypeVarTupleType, TypeVarLikeType
+    ParamSpecType, Parameters, UnpackType, TypeVarTupleType, SelfType, TypeVarLikeType
 )
 from mypy.subtypes import is_equivalent, is_subtype, is_callable_compatible, is_proper_subtype
 from mypy.erasetype import erase_type
@@ -536,6 +536,9 @@ class TypeMeetVisitor(TypeVisitor[ProperType]):
             return self.s
         else:
             return self.default(self.s)
+
+    def visit_self_type(self, t: SelfType) -> ProperType:
+        return self.meet(self.s, t.instance)
 
     def visit_param_spec(self, t: ParamSpecType) -> ProperType:
         if self.s == t:

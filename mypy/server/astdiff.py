@@ -60,7 +60,7 @@ from mypy.types import (
     Type, TypeVisitor, UnboundType, AnyType, NoneType, UninhabitedType,
     ErasedType, DeletedType, Instance, TypeVarType, CallableType, TupleType, TypedDictType,
     UnionType, Overloaded, PartialType, TypeType, LiteralType, TypeAliasType, ParamSpecType,
-    Parameters, UnpackType, TypeVarTupleType,
+    Parameters, UnpackType, TypeVarTupleType, SelfType,
 )
 from mypy.util import get_prefix
 
@@ -332,6 +332,12 @@ class SnapshotTypeVisitor(TypeVisitor[SnapshotItem]):
                 snapshot_types(typ.arg_types),
                 tuple(encode_optional_str(name) for name in typ.arg_names),
                 tuple(typ.arg_kinds))
+
+    def visit_self_type(self, typ: SelfType) -> SnapshotItem:
+        return ('SelfType',
+                typ.fullname,
+                snapshot_type(typ.instance)
+                )
 
     def visit_callable_type(self, typ: CallableType) -> SnapshotItem:
         # FIX generics

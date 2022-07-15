@@ -60,7 +60,7 @@ from mypy.types import (
     TupleType, TypeType, TypedDictType, UnboundType, UninhabitedType, UnionType,
     Overloaded, TypeVarType, TypeList, CallableArgument, EllipsisType, StarType, LiteralType,
     RawExpressionType, PartialType, PlaceholderType, TypeAliasType, ParamSpecType, Parameters,
-    UnpackType, TypeVarTupleType,
+    UnpackType, TypeVarTupleType, SelfType,
 )
 from mypy.util import get_prefix, replace_object_state
 from mypy.typestate import TypeState
@@ -426,6 +426,9 @@ class TypeReplaceVisitor(SyntheticTypeVisitor[None]):
     def visit_parameters(self, typ: Parameters) -> None:
         for arg in typ.arg_types:
             arg.accept(self)
+
+    def visit_self_type(self, typ: SelfType) -> None:
+        typ.instance.accept(self)
 
     def visit_typeddict_type(self, typ: TypedDictType) -> None:
         for value_type in typ.items.values():

@@ -7,7 +7,7 @@ from mypy.types import (
     TypeVarType, LiteralType, Instance, CallableType, TupleType, TypedDictType, UnionType,
     Overloaded, TypeType, CallableArgument, UnboundType, TypeList, StarType, EllipsisType,
     PlaceholderType, PartialType, RawExpressionType, TypeAliasType, ParamSpecType, Parameters,
-    UnpackType, TypeVarTupleType,
+    UnpackType, TypeVarTupleType, SelfType,
 )
 
 
@@ -54,6 +54,9 @@ class TypeTraverserVisitor(SyntheticTypeVisitor[None]):
 
     def visit_instance(self, t: Instance) -> None:
         self.traverse_types(t.args)
+
+    def visit_self_type(self, t: SelfType) -> None:
+        self.visit_instance(t.instance)
 
     def visit_callable_type(self, t: CallableType) -> None:
         # FIX generics

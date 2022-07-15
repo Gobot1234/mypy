@@ -13,7 +13,8 @@ other modules refer to them.
 
 from abc import abstractmethod
 from mypy.backports import OrderedDict
-from typing import Generic, TypeVar, cast, Any, List, Callable, Iterable, Optional, Set, Sequence
+from typing import Generic, TypeVar, cast, Any, List, Callable, Iterable, Optional,\
+    Set, Sequence
 from mypy_extensions import trait, mypyc_attr
 
 T = TypeVar('T')
@@ -24,7 +25,7 @@ from mypy.types import (
     UnionType, TypeVarType, PartialType, DeletedType, UninhabitedType, TypeVarLikeType,
     UnboundType, ErasedType, StarType, EllipsisType, TypeList, CallableArgument,
     PlaceholderType, TypeAliasType, ParamSpecType, UnpackType, TypeVarTupleType,
-    get_proper_type
+    get_proper_type, SelfType,
 )
 
 
@@ -65,6 +66,9 @@ class TypeVisitor(Generic[T]):
         pass
 
     @abstractmethod
+    def visit_self_type(self, t: SelfType) -> T:
+        pass
+
     def visit_param_spec(self, t: ParamSpecType) -> T:
         pass
 
@@ -196,6 +200,9 @@ class TypeTranslator(TypeVisitor[Type]):
     def visit_type_var(self, t: TypeVarType) -> Type:
         return t
 
+    def visit_self_type(self, t: SelfType) -> Type:
+        return t
+
     def visit_param_spec(self, t: ParamSpecType) -> Type:
         return t
 
@@ -320,6 +327,9 @@ class TypeQuery(SyntheticTypeVisitor[T]):
     def visit_type_var(self, t: TypeVarType) -> T:
         return self.query_types([t.upper_bound] + t.values)
 
+    def visit_self_type(self, t: SelfType) -> T:
+        return self.strategy([])
+
     def visit_param_spec(self, t: ParamSpecType) -> T:
         return self.strategy([])
 
@@ -392,3 +402,87 @@ class TypeQuery(SyntheticTypeVisitor[T]):
                 self.seen_aliases.add(t)
             res.append(t.accept(self))
         return self.strategy(res)
+
+
+class SelfTypeVisitor(TypeVisitor[Any]):
+    def __init__(self, self_type: Type) -> None:
+        self.self_type = self_type
+
+    def visit_unbound_type(self, t: UnboundType) -> None:
+        pass
+
+    def visit_any(self, t: AnyType) -> None:
+        pass
+
+    def visit_none_type(self, t: NoneType) -> None:
+        pass
+
+    def visit_uninhabited_type(self, t: UninhabitedType) -> None:
+        pass
+
+    def visit_erased_type(self, t: ErasedType) -> None:
+        pass
+
+    def visit_deleted_type(self, t: DeletedType) -> None:
+        pass
+
+    def visit_type_var(self, t: TypeVarType) -> None:
+        pass
+
+    def visit_self_type(self, t: SelfType) -> None:
+        pass  # should this raise?
+
+    def visit_param_spec(self, t: ParamSpecType) -> None:
+        pass
+
+    def visit_type_var_tuple(self, t: TypeVarTupleType) -> T:
+        pass
+
+    def visit_unpack_type(self, t: UnpackType) -> T:
+        pass
+
+    def visit_parameters(self, t: Parameters) -> T:
+        pass
+
+    def visit_instance(self, t: Instance) -> None:
+        t.args = tuple(self.replace_types(t.args))
+
+    def visit_callable_type(self, t: CallableType) -> None:
+        t.arg_types = self.replace_types(t.arg_types)
+        t.ret_type = self.replace_type(t.ret_type)
+
+    def visit_overloaded(self, t: Overloaded) -> None:
+        for item in t.items:
+            item.accept(self)
+
+    def visit_tuple_type(self, t: TupleType) -> None:
+        t.items = self.replace_types(t.items)
+
+    def visit_typeddict_type(self, t: TypedDictType) -> None:
+        for key, value in zip(t.items, self.replace_types(t.items.values())):
+            t.items[key] = value
+
+    def visit_literal_type(self, t: LiteralType) -> None:
+        pass
+
+    def visit_union_type(self, t: UnionType) -> None:
+        t.items = self.replace_types(t.items)
+
+    def visit_partial_type(self, t: PartialType) -> None:
+        pass
+
+    def visit_type_type(self, t: TypeType) -> None:
+        t.item = get_proper_type(self.replace_type(t.item))
+
+    def visit_type_alias_type(self, t: TypeAliasType) -> None:
+        pass  # TODO this is probably invalid
+
+    def replace_types(self, types: Iterable[Type]) -> List[Type]:
+        return [self.replace_type(typ) for typ in types]
+
+    def replace_type(self, typ: Type) -> Type:
+        if isinstance(typ, SelfType):  # type: ignore
+            typ = self.self_type
+        else:
+            typ.accept(self)
+        return typ

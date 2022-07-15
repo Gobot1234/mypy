@@ -71,6 +71,7 @@ typecheck_files = [
     'check-newtype.test',
     'check-class-namedtuple.test',
     'check-selftype.test',
+    'check-selftyping.test',
     'check-python2.test',
     'check-columns.test',
     'check-functions.test',

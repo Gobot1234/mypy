@@ -6,7 +6,7 @@ from mypy.types import (
     ErasedType, PartialType, DeletedType, UninhabitedType, TypeType, TypeVarId,
     FunctionLike, TypeVarType, LiteralType, get_proper_type, ProperType,
     TypeAliasType, ParamSpecType, TypeVarLikeType, Parameters, ParamSpecFlavor,
-    UnpackType, TypeVarTupleType
+    UnpackType, TypeVarTupleType, SelfType,
 )
 
 
@@ -99,6 +99,9 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
             return Instance(inst.type, inst.args, line=inst.line, column=inst.column)
         else:
             return repl
+
+    def visit_self_type(self, t: SelfType) -> Type:
+        return t
 
     def visit_param_spec(self, t: ParamSpecType) -> Type:
         repl = get_proper_type(self.variables.get(t.id, t))
