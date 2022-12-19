@@ -1,7 +1,6 @@
 import abc
 import collections
 import sys
-from _typeshed import IdentityFunction, Self as TypeshedSelf  # see #6932 for why the Self alias cannot have a leading underscore
 from collections.abc import Iterable
 from typing import (  # noqa: Y022,Y027,Y039
     TYPE_CHECKING as TYPE_CHECKING,
@@ -31,6 +30,11 @@ from typing import (  # noqa: Y022,Y027,Y039
     ValuesView,
     _Alias,
     overload as overload,
+)
+
+from _typeshed import (  # see #6932 for why the Self alias cannot have a leading underscore
+    IdentityFunction,
+    Self as TypeshedSelf,
 )
 
 __all__ = [
@@ -231,7 +235,7 @@ else:
     @final
     class TypeVarTuple:
         __name__: str
-        def __init__(self, name: str) -> None: ...
+        def __init__(self, name: str, default: object) -> None: ...
         def __iter__(self) -> Any: ...  # Unpack[Self]
 
     def dataclass_transform(

@@ -1,5 +1,7 @@
 """Abstract syntax tree node classes (i.e. parse tree)."""
 
+from __future__ import annotations
+
 import os
 from abc import abstractmethod
 from collections import defaultdict
@@ -2429,6 +2431,11 @@ class TypeVarTupleExpr(TypeVarLikeExpr):
     """Type variable tuple expression TypeVarTuple(...)."""
 
     __slots__ = ()
+
+    default: mypy.types.UnpackType | mypy.types.AnyType  # Unpack or Any
+
+    def __init__(self, name: str, fullname: str, upper_bound: mypy.types.Type, default: mypy.types.UnpackType|mypy.types.AnyType, variance: int = INVARIANT) -> None:
+        super().__init__(name, fullname, upper_bound, default, variance)
 
     def accept(self, visitor: ExpressionVisitor[T]) -> T:
         return visitor.visit_type_var_tuple_expr(self)

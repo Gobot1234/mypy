@@ -274,6 +274,7 @@ from mypy.types import (
     TypeVarType,
     UnboundType,
     UninhabitedType,
+    UnpackType,
     get_proper_type,
     get_proper_types,
     invalid_recursive_alias,
@@ -1606,7 +1607,7 @@ class SemanticAnalyzer(
                     _, _, default_type_var_name = fullname.rpartition(".")
                     if tvar_expr.default.name == default_type_var_name:
                         tvar_expr.default = type_var
-
+                        # TODO(PEP 696) detect out of order typevars
             tvar_def = self.tvar_scope.get_binding(tvar_expr.fullname)
             if tvar_def is None:
                 tvar_def = self.tvar_scope.bind_new(name, tvar_expr)
@@ -1655,30 +1656,26 @@ class SemanticAnalyzer(
         if sym and isinstance(sym.node, PlaceholderNode):
             self.record_incomplete_ref()
         if sym and isinstance(sym.node, ParamSpecExpr):
-            if (
-                sym.fullname
-                and not self.tvar_scope.allow_binding(sym.fullname)
-                and self.tvar_scope.parent
-                and self.tvar_scope.parent.allow_binding(sym.fullname)
-            ):
-                # It's bound by our type variable scope
-                return None
+            # if (
+            #     sym.fullname
+            #     and not self.tvar_scope.allow_binding(sym.fullname)
+            # ):
+            #     # It's bound by our type variable scope
+            #     return None
             return unbound.name, sym.node
         if sym and isinstance(sym.node, TypeVarTupleExpr):
-            if (
-                sym.fullname
-                and not self.tvar_scope.allow_binding(sym.fullname)
-                and self.tvar_scope.parent
-                and self.tvar_scope.parent.allow_binding(sym.fullname)
-            ):
-                # It's bound by our type variable scope
-                return None
+            # if (
+            #     sym.fullname
+            #     and not self.tvar_scope.allow_binding(sym.fullname)
+            # ):
+            #     # It's bound by our type variable scope
+            #     return None
             return unbound.name, sym.node
         if sym is None or not isinstance(sym.node, TypeVarExpr):
             return None
-        elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
-            # It's bound by our type variable scope
-            return None
+        # elif sym.fullname and not self.tvar_scope.allow_binding(sym.fullname):
+        #     # It's bound by our type variable scope
+        #     return None
         else:
             if isinstance(sym.node.default, sym.node.__class__):
                 return None
@@ -3804,7 +3801,7 @@ class SemanticAnalyzer(
                 # ParamSpec is different from a regular TypeVar:
                 # arguments are not semantically valid. But, allowed in runtime.
                 # So, we need to warn users about possible invalid usage.
-                self.fail("Only the first argument to ParamSpec has defined semantics", s)
+                self.fail("The variance and bound arguments to ParamSpec do not yet have defined semantics", s)
 
         # PEP 612 reserves the right to define bound, covariant and contravariant arguments to
         # ParamSpec in a later PEP. If and when that happens, we should do something
@@ -3833,12 +3830,30 @@ class SemanticAnalyzer(
         if not call:
             return False
 
-        if len(call.args) > 1:
-            self.fail("Only the first argument to TypeVarTuple has defined semantics", s)
 
-        if not self.options.enable_incomplete_features:
-            self.fail('"TypeVarTuple" is not supported by mypy yet', s)
-            return False
+        n_values = call.arg_kinds[1:].count(ARG_POS)
+        default =  AnyType(TypeOfAny.from_omitted_generics)
+        for param_value, param_name, param_kind in zip(
+            call.args[1 + n_values :],
+            call.arg_names[1 + n_values :],
+            call.arg_kinds[1 + n_values :],
+        ):
+            if param_name == "default":
+                default = self.get_typevarlike_argument(param_name, param_value, s)
+                if default is None:
+                    return False
+                if not isinstance(default, UnpackType):
+                    self.fail(
+                        "The default argument to TypeVarTuple must be an Unpacked tuple",
+                        default,
+                    )
+                    return False
+            else:
+                self.fail("The variance and bound arguments to TypeVarTuple do not yet have defined semantics", s)
+
+        # if not self.options.enable_incomplete_features:
+        #     self.fail('"TypeVarTuple" is not supported by mypy yet', s)
+        #     return False
 
         name = self.extract_typevarlike_name(s, call)
         if name is None:
@@ -3847,7 +3862,7 @@ class SemanticAnalyzer(
         # PEP 646 does not specify the behavior of variance, constraints, or bounds.
         if not call.analyzed:
             typevartuple_var = TypeVarTupleExpr(
-                name, self.qualified_name(name), self.object_type(), INVARIANT
+                name, self.qualified_name(name), self.object_type(), default, INVARIANT
             )
             typevartuple_var.line = call.line
             call.analyzed = typevartuple_var
@@ -5921,8 +5936,12 @@ class SemanticAnalyzer(
             assert info.tuple_type, "NamedTuple without tuple type"
             fallback = Instance(info, [])
             return TupleType(info.tuple_type.items, fallback=fallback)
+        print(expr)
         typ = self.expr_to_unanalyzed_type(expr)
-        return self.anal_type(typ, **kwargs)
+        print("type",typ)
+        analised = self.anal_type(typ, **kwargs)
+        print(f"{analised=}")
+        return analised
 
     def analyze_type_expr(self, expr: Expression) -> None:
         # There are certain expressions that mypy does not need to semantically analyze,

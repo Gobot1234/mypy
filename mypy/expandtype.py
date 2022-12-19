@@ -90,7 +90,10 @@ def freshen_function_type_vars(callee: F) -> F:
             # TODO(PEP612): fix for ParamSpecType
             tv = v.new_unification_variable(v)
             if isinstance(tv.default, tv.__class__):
-                tv.default = tvmap[tv.default.id]
+                try:
+                    tv.default = tvmap[tv.default.id]
+                except KeyError:
+                    tv.default = tv.default.default
             tvs.append(tv)
             tvmap[tv.id] = tv
         fresh = cast(CallableType, expand_type(callee, tvmap)).copy_modified(variables=tvs)
@@ -139,8 +142,8 @@ class ExpandTypeVisitor(TypeVisitor[Type]):
     def visit_type_var(self, t: TypeVarType) -> Type:
         repl = self.variables.get(t.id, t)
 
-        if has_type_vars(repl):
-            if repl in self.recursive_guard:
+        if has_type_vars(repl) and not isinstance(repl, TypeVarType):
+            if repl in self.recursive_guard or isinstance(repl, TypeVarType):
                 return repl
             self.recursive_guard.add(repl)
             repl = repl.accept(self)

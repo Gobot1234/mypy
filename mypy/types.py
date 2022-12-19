@@ -2856,7 +2856,7 @@ class TypeStrVisitor(SyntheticTypeVisitor[str]):
 
         if t.args:
             if t.type.fullname == "builtins.tuple":
-                assert len(t.args) == 1
+                # assert len(t.args) == 1
                 s += f"[{self.list_str(t.args)}, ...]"
             else:
                 s += f"[{self.list_str(t.args)}]"
