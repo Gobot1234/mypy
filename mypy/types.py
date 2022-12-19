@@ -617,7 +617,11 @@ class TypeVarType(TypeVarLikeType):
         )
 
     def copy_modified(
-        self, *, id: Union[TypeVarId, int] = _dummy, upper_bound: Bogus[Type] = _dummy, default: Bogus[Type] = _dummy
+        self,
+        *,
+        id: Union[TypeVarId, int] = _dummy,
+        upper_bound: Bogus[Type] = _dummy,
+        default: Bogus[Type] = _dummy,
     ) -> Self:
         return self.__class__(
             self.name,
@@ -813,7 +817,13 @@ class TypeVarTupleType(TypeVarLikeType):
             return NotImplemented
         return self.id == other.id
 
-    def copy_modified(self, *, id: Bogus[Union[TypeVarId, int]] = _dummy, upper_bound: Bogus[Type] = _dummy, default: Bogus[Type] = _dummy) -> "TypeVarTupleType":
+    def copy_modified(
+        self,
+        *,
+        id: Bogus[Union[TypeVarId, int]] = _dummy,
+        upper_bound: Bogus[Type] = _dummy,
+        default: Bogus[Type] = _dummy,
+    ) -> "TypeVarTupleType":
         return TypeVarTupleType(
             self.name,
             self.fullname,

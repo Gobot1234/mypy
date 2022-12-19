@@ -393,8 +393,11 @@ def analyze_type_callable_member_access(name: str, typ: FunctionLike, mx: Member
             )
             if result:
                 from mypy.expandtype import expand_type
+
                 env: dict[TypeVarId, TypeVarLikeType] = {t.id: t for t in result.variables}
-                env.update({t.id: type_ for t, type_ in zip(ret_type.type.defn.type_vars, ret_type.args)})
+                env.update(
+                    {t.id: type_ for t, type_ in zip(ret_type.type.defn.type_vars, ret_type.args)}
+                )
                 return expand_type(result, env)
         # Look up from the 'type' type.
         return _analyze_member_access(name, typ.fallback, mx)

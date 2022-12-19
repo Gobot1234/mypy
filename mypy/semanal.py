@@ -265,8 +265,8 @@ from mypy.types import (
     TypeVarLikeType,
     TypeVarType,
     UnboundType,
-    UnpackType,
     UninhabitedType,
+    UnpackType,
     get_proper_type,
     get_proper_types,
     invalid_recursive_alias,
@@ -4123,7 +4123,10 @@ class SemanticAnalyzer(
                 # ParamSpec is different from a regular TypeVar:
                 # arguments are not semantically valid. But, allowed in runtime.
                 # So, we need to warn users about possible invalid usage.
-                self.fail("The variance and bound arguments to ParamSpec do not yet have defined semantics", s)
+                self.fail(
+                    "The variance and bound arguments to ParamSpec do not yet have defined semantics",
+                    s,
+                )
 
         # PEP 612 reserves the right to define bound, covariant and contravariant arguments to
         # ParamSpec in a later PEP. If and when that happens, we should do something
@@ -4152,11 +4155,10 @@ class SemanticAnalyzer(
         if not call:
             return False
 
-
         if not self.incomplete_feature_enabled(TYPE_VAR_TUPLE, s):
             return False
         n_values = call.arg_kinds[1:].count(ARG_POS)
-        default =  AnyType(TypeOfAny.from_omitted_generics)
+        default = AnyType(TypeOfAny.from_omitted_generics)
         for param_value, param_name, param_kind in zip(
             call.args[1 + n_values :],
             call.arg_names[1 + n_values :],
@@ -4168,12 +4170,14 @@ class SemanticAnalyzer(
                     return False
                 if not isinstance(default, UnpackType):
                     self.fail(
-                        "The default argument to TypeVarTuple must be an Unpacked tuple",
-                        default,
+                        "The default argument to TypeVarTuple must be an Unpacked tuple", default
                     )
                     return False
             else:
-                self.fail("The variance and bound arguments to TypeVarTuple do not yet have defined semantics", s)
+                self.fail(
+                    "The variance and bound arguments to TypeVarTuple do not yet have defined semantics",
+                    s,
+                )
 
         name = self.extract_typevarlike_name(s, call)
         if name is None:
@@ -4183,7 +4187,12 @@ class SemanticAnalyzer(
         if not call.analyzed:
             tuple_fallback = self.named_type("builtins.tuple", [self.object_type()])
             typevartuple_var = TypeVarTupleExpr(
-                name, self.qualified_name(name), self.object_type(), default, tuple_fallback, INVARIANT
+                name,
+                self.qualified_name(name),
+                self.object_type(),
+                default,
+                tuple_fallback,
+                INVARIANT,
             )
             typevartuple_var.line = call.line
             call.analyzed = typevartuple_var
