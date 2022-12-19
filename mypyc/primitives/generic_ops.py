@@ -9,6 +9,8 @@ will take precedence. If your specialized op doesn't seem to be used,
 check that the priorities are configured properly.
 """
 
+from __future__ import annotations
+
 from mypyc.ir.ops import ERR_MAGIC, ERR_NEVER
 from mypyc.ir.rtypes import (
     bool_rprimitive,
@@ -140,6 +142,16 @@ unary_op(
     c_function_name="PyObject_Not",
     error_kind=ERR_NEG_INT,
     truncated_type=bool_rprimitive,
+    priority=0,
+)
+
+# abs(obj)
+function_op(
+    name="builtins.abs",
+    arg_types=[object_rprimitive],
+    return_type=object_rprimitive,
+    c_function_name="PyNumber_Absolute",
+    error_kind=ERR_MAGIC,
     priority=0,
 )
 
@@ -331,4 +343,20 @@ next_raw_op = custom_op(
     return_type=object_rprimitive,
     c_function_name="CPyIter_Next",
     error_kind=ERR_NEVER,
+)
+
+# this would be aiter(obj) if it existed
+aiter_op = custom_op(
+    arg_types=[object_rprimitive],
+    return_type=object_rprimitive,
+    c_function_name="CPy_GetAIter",
+    error_kind=ERR_MAGIC,
+)
+
+# this would be anext(obj) if it existed
+anext_op = custom_op(
+    arg_types=[object_rprimitive],
+    return_type=object_rprimitive,
+    c_function_name="CPy_GetANext",
+    error_kind=ERR_MAGIC,
 )

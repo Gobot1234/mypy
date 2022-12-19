@@ -1,15 +1,8 @@
-import sys
-from _typeshed import ReadableBuffer, Self, WriteableBuffer
-from collections.abc import Iterable
-from enum import IntEnum, IntFlag
-from io import BufferedReader, BufferedRWPair, BufferedWriter, IOBase, RawIOBase, TextIOWrapper
-from typing import Any, Protocol, overload
-from typing_extensions import Literal
-
 # Ideally, we'd just do "from _socket import *". Unfortunately, socket
 # overrides some definitions from _socket incompatibly. mypy incorrectly
 # prefers the definitions from _socket over those defined here.
 import _socket
+import sys
 from _socket import (
     _FD,
     EAI_AGAIN as EAI_AGAIN,
@@ -119,6 +112,12 @@ from _socket import (
     setdefaulttimeout as setdefaulttimeout,
     timeout as timeout,
 )
+from _typeshed import ReadableBuffer, Self, WriteableBuffer
+from collections.abc import Iterable
+from enum import IntEnum, IntFlag
+from io import BufferedReader, BufferedRWPair, BufferedWriter, IOBase, RawIOBase, TextIOWrapper
+from typing import Any, Protocol, overload
+from typing_extensions import Literal
 
 if sys.platform != "darwin" or sys.version_info >= (3, 9):
     from _socket import (
@@ -297,6 +296,20 @@ if sys.platform == "linux":
         CAN_RAW_RECV_OWN_MSGS as CAN_RAW_RECV_OWN_MSGS,
         CAN_RTR_FLAG as CAN_RTR_FLAG,
         CAN_SFF_MASK as CAN_SFF_MASK,
+        NETLINK_ARPD as NETLINK_ARPD,
+        NETLINK_CRYPTO as NETLINK_CRYPTO,
+        NETLINK_DNRTMSG as NETLINK_DNRTMSG,
+        NETLINK_FIREWALL as NETLINK_FIREWALL,
+        NETLINK_IP6_FW as NETLINK_IP6_FW,
+        NETLINK_NFLOG as NETLINK_NFLOG,
+        NETLINK_ROUTE as NETLINK_ROUTE,
+        NETLINK_ROUTE6 as NETLINK_ROUTE6,
+        NETLINK_SKIP as NETLINK_SKIP,
+        NETLINK_TAPBASE as NETLINK_TAPBASE,
+        NETLINK_TCPDIAG as NETLINK_TCPDIAG,
+        NETLINK_USERSOCK as NETLINK_USERSOCK,
+        NETLINK_W1 as NETLINK_W1,
+        NETLINK_XFRM as NETLINK_XFRM,
         PACKET_BROADCAST as PACKET_BROADCAST,
         PACKET_FASTROUTE as PACKET_FASTROUTE,
         PACKET_HOST as PACKET_HOST,
@@ -724,7 +737,7 @@ if sys.platform != "win32":
     if sys.version_info >= (3, 9):
         # flags and address appear to be unused in send_fds and recv_fds
         def send_fds(
-            sock: socket, buffers: Iterable[bytes], fds: bytes | Iterable[int], flags: int = ..., address: None = ...
+            sock: socket, buffers: Iterable[ReadableBuffer], fds: Iterable[int], flags: int = ..., address: None = ...
         ) -> int: ...
         def recv_fds(sock: socket, bufsize: int, maxfds: int, flags: int = ...) -> tuple[bytes, list[int], int, Any]: ...
 
@@ -754,16 +767,14 @@ if sys.version_info >= (3, 11):
     def create_connection(
         address: tuple[str | None, int],
         timeout: float | None = ...,  # noqa: F811
-        source_address: tuple[bytearray | bytes | str, int] | None = ...,
+        source_address: _Address | None = ...,
         *,
         all_errors: bool = ...,
     ) -> socket: ...
 
 else:
     def create_connection(
-        address: tuple[str | None, int],
-        timeout: float | None = ...,  # noqa: F811
-        source_address: tuple[bytearray | bytes | str, int] | None = ...,
+        address: tuple[str | None, int], timeout: float | None = ..., source_address: _Address | None = ...  # noqa: F811
     ) -> socket: ...
 
 if sys.version_info >= (3, 8):
@@ -774,5 +785,10 @@ if sys.version_info >= (3, 8):
 
 # the 5th tuple item is an address
 def getaddrinfo(
-    host: bytes | str | None, port: str | int | None, family: int = ..., type: int = ..., proto: int = ..., flags: int = ...
+    host: bytes | str | None,
+    port: bytes | str | int | None,
+    family: int = ...,
+    type: int = ...,
+    proto: int = ...,
+    flags: int = ...,
 ) -> list[tuple[AddressFamily, SocketKind, int, str, tuple[str, int] | tuple[str, int, int, int]]]: ...

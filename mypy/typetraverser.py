@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterable
 
 from mypy_extensions import trait
@@ -129,6 +131,9 @@ class TypeTraverserVisitor(SyntheticTypeVisitor[None]):
         pass
 
     def visit_type_alias_type(self, t: TypeAliasType) -> None:
+        # TODO: sometimes we want to traverse target as well
+        # We need to find a way to indicate explicitly the intent,
+        # maybe make this method abstract (like for TypeTranslator)?
         self.traverse_types(t.args)
 
     def visit_unpack_type(self, t: UnpackType) -> None:

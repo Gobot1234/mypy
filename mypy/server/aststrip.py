@@ -31,8 +31,11 @@ Notes:
   even though some identities are preserved.
 """
 
+from __future__ import annotations
+
 from contextlib import contextmanager, nullcontext
-from typing import Dict, Iterator, Optional, Tuple, Union
+from typing import Dict, Iterator, Tuple
+from typing_extensions import TypeAlias as _TypeAlias
 
 from mypy.nodes import (
     CLASSDEF_NO_INFO,
@@ -51,6 +54,7 @@ from mypy.nodes import (
     MypyFile,
     NameExpr,
     Node,
+    OpExpr,
     OverloadedFuncDef,
     RefExpr,
     StarExpr,
@@ -64,11 +68,11 @@ from mypy.traverser import TraverserVisitor
 from mypy.types import CallableType
 from mypy.typestate import TypeState
 
-SavedAttributes = Dict[Tuple[ClassDef, str], SymbolTableNode]
+SavedAttributes: _TypeAlias = Dict[Tuple[ClassDef, str], SymbolTableNode]
 
 
 def strip_target(
-    node: Union[MypyFile, FuncDef, OverloadedFuncDef], saved_attrs: SavedAttributes
+    node: MypyFile | FuncDef | OverloadedFuncDef, saved_attrs: SavedAttributes
 ) -> None:
     """Reset a fine-grained incremental target to state before semantic analysis.
 
@@ -91,7 +95,7 @@ def strip_target(
 class NodeStripVisitor(TraverserVisitor):
     def __init__(self, saved_class_attrs: SavedAttributes) -> None:
         # The current active class.
-        self.type: Optional[TypeInfo] = None
+        self.type: TypeInfo | None = None
         # This is True at class scope, but not in methods.
         self.is_class_body = False
         # By default, process function definitions. If False, don't -- this is used for
@@ -137,6 +141,8 @@ class NodeStripVisitor(TraverserVisitor):
         ]
         with self.enter_class(node.info):
             super().visit_class_def(node)
+        node.defs.body.extend(node.removed_statements)
+        node.removed_statements = []
         TypeState.reset_subtype_caches_for(node.info)
         # Kill the TypeInfo, since there is none before semantic analysis.
         node.info = CLASSDEF_NO_INFO
@@ -216,6 +222,10 @@ class NodeStripVisitor(TraverserVisitor):
     def visit_index_expr(self, node: IndexExpr) -> None:
         node.analyzed = None  # May have been an alias or type application.
         super().visit_index_expr(node)
+
+    def visit_op_expr(self, node: OpExpr) -> None:
+        node.analyzed = None  # May have been an alias
+        super().visit_op_expr(node)
 
     def strip_ref_expr(self, node: RefExpr) -> None:
         node.kind = None

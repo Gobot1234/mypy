@@ -2,10 +2,10 @@ import email.message
 import io
 import ssl
 import types
-from _typeshed import Self, WriteableBuffer
+from _typeshed import ReadableBuffer, Self, SupportsRead, WriteableBuffer
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from socket import socket
-from typing import IO, Any, BinaryIO, Protocol, TypeVar, overload
+from typing import Any, BinaryIO, TypeVar, overload
 from typing_extensions import TypeAlias
 
 __all__ = [
@@ -30,7 +30,7 @@ __all__ = [
     "HTTPSConnection",
 ]
 
-_DataType: TypeAlias = bytes | IO[Any] | Iterable[bytes] | str
+_DataType: TypeAlias = SupportsRead[bytes] | Iterable[ReadableBuffer] | ReadableBuffer
 _T = TypeVar("_T")
 
 HTTP_PORT: int
@@ -125,7 +125,6 @@ class HTTPResponse(io.BufferedIOBase, BinaryIO):
     @overload
     def getheader(self, name: str, default: _T) -> str | _T: ...
     def getheaders(self) -> list[tuple[str, str]]: ...
-    def fileno(self) -> int: ...
     def isclosed(self) -> bool: ...
     def __iter__(self) -> Iterator[bytes]: ...
     def __enter__(self: Self) -> Self: ...
@@ -136,18 +135,6 @@ class HTTPResponse(io.BufferedIOBase, BinaryIO):
     def geturl(self) -> str: ...
     def getcode(self) -> int: ...
     def begin(self) -> None: ...
-
-# This is an API stub only for the class below, not a class itself.
-# urllib.request uses it for a parameter.
-class _HTTPConnectionProtocol(Protocol):
-    def __call__(
-        self,
-        host: str,
-        port: int | None = ...,
-        timeout: float = ...,
-        source_address: tuple[str, int] | None = ...,
-        blocksize: int = ...,
-    ) -> HTTPConnection: ...
 
 class HTTPConnection:
     auto_open: int  # undocumented
@@ -167,7 +154,13 @@ class HTTPConnection:
         blocksize: int = ...,
     ) -> None: ...
     def request(
-        self, method: str, url: str, body: _DataType | None = ..., headers: Mapping[str, str] = ..., *, encode_chunked: bool = ...
+        self,
+        method: str,
+        url: str,
+        body: _DataType | str | None = ...,
+        headers: Mapping[str, str] = ...,
+        *,
+        encode_chunked: bool = ...,
     ) -> None: ...
     def getresponse(self) -> HTTPResponse: ...
     def set_debuglevel(self, level: int) -> None: ...
@@ -177,7 +170,7 @@ class HTTPConnection:
     def putrequest(self, method: str, url: str, skip_host: bool = ..., skip_accept_encoding: bool = ...) -> None: ...
     def putheader(self, header: str, *argument: str) -> None: ...
     def endheaders(self, message_body: _DataType | None = ..., *, encode_chunked: bool = ...) -> None: ...
-    def send(self, data: _DataType) -> None: ...
+    def send(self, data: _DataType | str) -> None: ...
 
 class HTTPSConnection(HTTPConnection):
     # Can be `None` if `.connect()` was not called:

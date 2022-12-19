@@ -883,9 +883,9 @@ from typing import TypeVar, Generic, Tuple
 T = TypeVar('T')
 class Test(Generic[T], Tuple[T]): pass
 x = Test() # type: Test[int]
+reveal_type(x)  # N: Revealed type is "Tuple[builtins.int, fallback=__main__.Test[builtins.int]]"
 [builtins fixtures/tuple.pyi]
 [out]
-main:4: error: Generic tuple types not supported
 
 
 -- Variable-length tuples (Tuple[t, ...] with literal '...')
@@ -970,6 +970,17 @@ reveal_type(c)  # N: Revealed type is "builtins.tuple[builtins.str, ...]"
 a = (1, 1, 'x', 'x')
 b = (1, 'x')
 a = (0, *b, '')
+[builtins fixtures/tuple.pyi]
+
+[case testUnpackSyntaxError]
+*foo  # E: Can use starred expression only as assignment target
+[builtins fixtures/tuple.pyi]
+
+[case testUnpackBases]
+class A: ...
+class B: ...
+bases = (A, B)
+class C(*bases): ...  # E: Invalid base class
 [builtins fixtures/tuple.pyi]
 
 [case testTupleMeetTupleAny]
@@ -1228,8 +1239,8 @@ y = ""
 reveal_type(t[x])  # N: Revealed type is "Union[builtins.int, builtins.str]"
 t[y]  # E: No overload variant of "__getitem__" of "tuple" matches argument type "str" \
       # N: Possible overload variants: \
-      # N:     def __getitem__(self, int) -> object \
-      # N:     def __getitem__(self, slice) -> Tuple[object, ...]
+      # N:     def __getitem__(self, int, /) -> object \
+      # N:     def __getitem__(self, slice, /) -> Tuple[object, ...]
 
 [builtins fixtures/tuple.pyi]
 

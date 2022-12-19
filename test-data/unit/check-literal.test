@@ -1484,16 +1484,17 @@ Alias = Literal[3]
 
 isinstance(3, Literal[3])           # E: Cannot use isinstance() with Literal type
 isinstance(3, Alias)                # E: Cannot use isinstance() with Literal type \
-                                    # E: Argument 2 to "isinstance" has incompatible type "object"; expected "Union[type, Tuple[Any, ...]]"
+                                    # E: Argument 2 to "isinstance" has incompatible type "<typing special form>"; expected "Union[type, Tuple[Any, ...]]"
 isinstance(3, Renamed[3])           # E: Cannot use isinstance() with Literal type
 isinstance(3, indirect.Literal[3])  # E: Cannot use isinstance() with Literal type
 
 issubclass(int, Literal[3])           # E: Cannot use issubclass() with Literal type
 issubclass(int, Alias)                # E: Cannot use issubclass() with Literal type \
-                                      # E: Argument 2 to "issubclass" has incompatible type "object"; expected "Union[type, Tuple[Any, ...]]"
+                                      # E: Argument 2 to "issubclass" has incompatible type "<typing special form>"; expected "Union[type, Tuple[Any, ...]]"
 issubclass(int, Renamed[3])           # E: Cannot use issubclass() with Literal type
 issubclass(int, indirect.Literal[3])  # E: Cannot use issubclass() with Literal type
 [builtins fixtures/isinstancelist.pyi]
+[typing fixtures/typing-medium.pyi]
 [out]
 
 [case testLiteralErrorsWhenSubclassed]
@@ -1830,7 +1831,8 @@ reveal_type(unify(func))  # N: Revealed type is "<nothing>"
 --
 
 [case testLiteralIntelligentIndexingTuples]
-from typing import Tuple, NamedTuple
+# flags: --strict-optional
+from typing import Tuple, NamedTuple, Optional, Final
 from typing_extensions import Literal
 
 class A: pass
@@ -1846,17 +1848,23 @@ idx3: Literal[3]
 idx4: Literal[4]
 idx5: Literal[5]
 idx_neg1: Literal[-1]
+idx_final: Final = 2
 
-tup1: Tuple[A, B, C, D, E]
+tup1: Tuple[A, B, Optional[C], D, E]
 reveal_type(tup1[idx0])       # N: Revealed type is "__main__.A"
 reveal_type(tup1[idx1])       # N: Revealed type is "__main__.B"
-reveal_type(tup1[idx2])       # N: Revealed type is "__main__.C"
+reveal_type(tup1[idx2])       # N: Revealed type is "Union[__main__.C, None]"
+reveal_type(tup1[idx_final])  # N: Revealed type is "Union[__main__.C, None]"
 reveal_type(tup1[idx3])       # N: Revealed type is "__main__.D"
 reveal_type(tup1[idx4])       # N: Revealed type is "__main__.E"
 reveal_type(tup1[idx_neg1])   # N: Revealed type is "__main__.E"
 tup1[idx5]                    # E: Tuple index out of range
-reveal_type(tup1[idx2:idx4])  # N: Revealed type is "Tuple[__main__.C, __main__.D]"
-reveal_type(tup1[::idx2])     # N: Revealed type is "Tuple[__main__.A, __main__.C, __main__.E]"
+reveal_type(tup1[idx2:idx4])  # N: Revealed type is "Tuple[Union[__main__.C, None], __main__.D]"
+reveal_type(tup1[::idx2])     # N: Revealed type is "Tuple[__main__.A, Union[__main__.C, None], __main__.E]"
+if tup1[idx2] is not None:
+    reveal_type(tup1[idx2])   # N: Revealed type is "Union[__main__.C, None]"
+if tup1[idx_final] is not None:
+    reveal_type(tup1[idx_final]) # N: Revealed type is "__main__.C"
 
 Tup2Class = NamedTuple('Tup2Class', [('a', A), ('b', B), ('c', C), ('d', D), ('e', E)])
 tup2: Tup2Class
@@ -1870,7 +1878,6 @@ tup2[idx5]                    # E: Tuple index out of range
 reveal_type(tup2[idx2:idx4])  # N: Revealed type is "Tuple[__main__.C, __main__.D, fallback=__main__.Tup2Class]"
 reveal_type(tup2[::idx2])     # N: Revealed type is "Tuple[__main__.A, __main__.C, __main__.E, fallback=__main__.Tup2Class]"
 [builtins fixtures/slice.pyi]
-[out]
 
 [case testLiteralIntelligentIndexingTypedDict]
 from typing_extensions import Literal
@@ -2430,23 +2437,10 @@ b: Final = 3
 c: Final[Literal[3]] = 3
 d: Literal[3]
 
-# TODO: Consider if we want to support cases 'b' and 'd' or not.
-# Probably not: we want to mostly keep the 'types' and 'value' worlds distinct.
-# However, according to final semantics, we ought to be able to substitute "b" with
-# "3" wherever it's used and get the same behavior -- so maybe we do need to support
-# at least case "b" for consistency?
-a_wrap: Literal[4, a]  # E: Parameter 2 of Literal[...] is invalid \
-                       # E: Variable "__main__.a" is not valid as a type \
-                       # N: See https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
-b_wrap: Literal[4, b]  # E: Parameter 2 of Literal[...] is invalid \
-                       # E: Variable "__main__.b" is not valid as a type \
-                       # N: See https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
-c_wrap: Literal[4, c]  # E: Parameter 2 of Literal[...] is invalid \
-                       # E: Variable "__main__.c" is not valid as a type \
-                       # N: See https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
-d_wrap: Literal[4, d]  # E: Parameter 2 of Literal[...] is invalid \
-                       # E: Variable "__main__.d" is not valid as a type \
-                       # N: See https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
+a_wrap: Literal[4, a]  # E: Parameter 2 of Literal[...] is invalid
+b_wrap: Literal[4, b]  # E: Parameter 2 of Literal[...] is invalid
+c_wrap: Literal[4, c]  # E: Parameter 2 of Literal[...] is invalid
+d_wrap: Literal[4, d]  # E: Parameter 2 of Literal[...] is invalid
 [builtins fixtures/tuple.pyi]
 [out]
 
@@ -2510,9 +2504,7 @@ r: Literal[Color.RED]
 g: Literal[Color.GREEN]
 b: Literal[Color.BLUE]
 bad1: Literal[Color]         # E: Parameter 1 of Literal[...] is invalid
-bad2: Literal[Color.func]    # E: Function "__main__.Color.func" is not valid as a type \
-                             # N: Perhaps you need "Callable[...]" or a callback protocol? \
-                             # E: Parameter 1 of Literal[...] is invalid
+bad2: Literal[Color.func]    # E: Parameter 1 of Literal[...] is invalid
 bad3: Literal[Color.func()]  # E: Invalid type: Literal[...] cannot contain arbitrary expressions
 
 def expects_color(x: Color) -> None: pass
@@ -2912,3 +2904,44 @@ def incorrect_return2() -> Union[Tuple[Literal[True], int], Tuple[Literal[False]
     else:
         return (bool(), 'oops')  # E: Incompatible return value type (got "Tuple[bool, str]", expected "Union[Tuple[Literal[True], int], Tuple[Literal[False], str]]")
 [builtins fixtures/bool.pyi]
+
+[case testLiteralSubtypeContext]
+from typing_extensions import Literal
+
+class A:
+    foo: Literal['bar', 'spam']
+class B(A):
+    foo = 'spam'
+
+reveal_type(B().foo)  # N: Revealed type is "Literal['spam']"
+[builtins fixtures/tuple.pyi]
+
+[case testLiteralSubtypeContextNested]
+from typing import List
+from typing_extensions import Literal
+
+class A:
+    foo: List[Literal['bar', 'spam']]
+class B(A):
+    foo = ['spam']
+
+reveal_type(B().foo)  # N: Revealed type is "builtins.list[Union[Literal['bar'], Literal['spam']]]"
+[builtins fixtures/tuple.pyi]
+
+[case testLiteralSubtypeContextGeneric]
+from typing_extensions import Literal
+from typing import Generic, List, TypeVar
+
+T = TypeVar("T", bound=str)
+
+class B(Generic[T]):
+    collection: List[T]
+    word: T
+
+class C(B[Literal["word"]]):
+   collection = ["word"]
+   word = "word"
+
+reveal_type(C().collection)  # N: Revealed type is "builtins.list[Literal['word']]"
+reveal_type(C().word)  # N: Revealed type is "Literal['word']"
+[builtins fixtures/tuple.pyi]

@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import unittest
-from typing import Dict
 
 from mypyc.codegen.emit import Emitter, EmitterContext
 from mypyc.ir.ops import BasicBlock, Register, Value
@@ -17,7 +18,7 @@ class TestEmitter(unittest.TestCase):
         assert emitter.label(BasicBlock(4)) == "CPyL4"
 
     def test_reg(self) -> None:
-        names: Dict[Value, str] = {self.n: "n"}
+        names: dict[Value, str] = {self.n: "n"}
         emitter = Emitter(self.context, names)
         assert emitter.reg(self.n) == "cpy_r_n"
 
@@ -27,4 +28,4 @@ class TestEmitter(unittest.TestCase):
         emitter.emit_line("a {")
         emitter.emit_line("f();")
         emitter.emit_line("}")
-        assert emitter.fragments == ["line;\n", "a {\n", "    f();\n", "}\n"]
+        assert emitter.fragments == ["line;\n", "a {\n", "\tf();\n", "}\n"]

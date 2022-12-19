@@ -1,6 +1,6 @@
 import io
 import sys
-from _typeshed import Self, StrOrBytesPath, StrPath
+from _typeshed import Self, StrOrBytesPath, StrPath, _BufferWithLen
 from collections.abc import Callable, Iterable, Iterator
 from os import PathLike
 from types import TracebackType
@@ -29,6 +29,7 @@ _DateTuple: TypeAlias = tuple[int, int, int, int, int, int]
 _ReadWriteMode: TypeAlias = Literal["r", "w"]
 _ReadWriteBinaryMode: TypeAlias = Literal["r", "w", "rb", "wb"]
 _ZipFileMode: TypeAlias = Literal["r", "w", "x", "a"]
+_CompressionMode: TypeAlias = Literal[0, 8, 12, 14]
 
 class BadZipFile(Exception): ...
 
@@ -100,17 +101,17 @@ class ZipFile:
     fp: IO[bytes] | None
     NameToInfo: dict[str, ZipInfo]
     start_dir: int  # undocumented
-    compression: int  # undocumented
+    compression: _CompressionMode  # undocumented
     compresslevel: int | None  # undocumented
     mode: _ZipFileMode  # undocumented
-    pwd: str | None  # undocumented
+    pwd: bytes | None  # undocumented
     if sys.version_info >= (3, 11):
         @overload
         def __init__(
             self,
             file: StrPath | IO[bytes],
             mode: Literal["r"] = ...,
-            compression: int = ...,
+            compression: _CompressionMode = ...,
             allowZip64: bool = ...,
             compresslevel: int | None = ...,
             *,
@@ -122,7 +123,7 @@ class ZipFile:
             self,
             file: StrPath | IO[bytes],
             mode: _ZipFileMode = ...,
-            compression: int = ...,
+            compression: _CompressionMode = ...,
             allowZip64: bool = ...,
             compresslevel: int | None = ...,
             *,
@@ -134,7 +135,7 @@ class ZipFile:
             self,
             file: StrPath | IO[bytes],
             mode: _ZipFileMode = ...,
-            compression: int = ...,
+            compression: _CompressionMode = ...,
             allowZip64: bool = ...,
             compresslevel: int | None = ...,
             *,
@@ -145,7 +146,7 @@ class ZipFile:
             self,
             file: StrPath | IO[bytes],
             mode: _ZipFileMode = ...,
-            compression: int = ...,
+            compression: _CompressionMode = ...,
             allowZip64: bool = ...,
             compresslevel: int | None = ...,
         ) -> None: ...
@@ -173,21 +174,30 @@ class ZipFile:
         self, filename: StrPath, arcname: StrPath | None = ..., compress_type: int | None = ..., compresslevel: int | None = ...
     ) -> None: ...
     def writestr(
-        self, zinfo_or_arcname: str | ZipInfo, data: bytes | str, compress_type: int | None = ..., compresslevel: int | None = ...
+        self,
+        zinfo_or_arcname: str | ZipInfo,
+        data: _BufferWithLen | str,
+        compress_type: int | None = ...,
+        compresslevel: int | None = ...,
     ) -> None: ...
     if sys.version_info >= (3, 11):
         def mkdir(self, zinfo_or_directory_name: str | ZipInfo, mode: int = ...) -> None: ...
 
 class PyZipFile(ZipFile):
     def __init__(
-        self, file: str | IO[bytes], mode: _ZipFileMode = ..., compression: int = ..., allowZip64: bool = ..., optimize: int = ...
+        self,
+        file: str | IO[bytes],
+        mode: _ZipFileMode = ...,
+        compression: _CompressionMode = ...,
+        allowZip64: bool = ...,
+        optimize: int = ...,
     ) -> None: ...
     def writepy(self, pathname: str, basename: str = ..., filterfunc: Callable[[str], bool] | None = ...) -> None: ...
 
 class ZipInfo:
     filename: str
     date_time: _DateTuple
-    compress_type: int
+    compress_type: _CompressionMode
     comment: bytes
     extra: bytes
     create_system: int
@@ -265,10 +275,10 @@ if sys.version_info >= (3, 8):
 
 def is_zipfile(filename: StrOrBytesPath | _SupportsReadSeekTell) -> bool: ...
 
-ZIP_STORED: int
-ZIP_DEFLATED: int
+ZIP_STORED: Literal[0]
+ZIP_DEFLATED: Literal[8]
 ZIP64_LIMIT: int
 ZIP_FILECOUNT_LIMIT: int
 ZIP_MAX_COMMENT: int
-ZIP_BZIP2: int
-ZIP_LZMA: int
+ZIP_BZIP2: Literal[12]
+ZIP_LZMA: Literal[14]

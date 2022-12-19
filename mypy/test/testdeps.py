@@ -1,8 +1,9 @@
 """Test cases for generating node-level dependencies (for fine-grained incremental checking)"""
 
+from __future__ import annotations
+
 import os
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Optional, Set, Tuple
 
 from mypy import build
 from mypy.errors import CompileError
@@ -32,13 +33,14 @@ class GetDependenciesSuite(DataSuite):
         options.cache_dir = os.devnull
         options.export_types = True
         options.preserve_asts = True
+        options.allow_empty_bodies = True
         messages, files, type_map = self.build(src, options)
         a = messages
         if files is None or type_map is None:
             if not a:
                 a = ["Unknown compile error (likely syntax error in test case or fixture)"]
         else:
-            deps: DefaultDict[str, Set[str]] = defaultdict(set)
+            deps: defaultdict[str, set[str]] = defaultdict(set)
             for module in files:
                 if (
                     module in dumped_modules
@@ -69,7 +71,7 @@ class GetDependenciesSuite(DataSuite):
 
     def build(
         self, source: str, options: Options
-    ) -> Tuple[List[str], Optional[Dict[str, MypyFile]], Optional[Dict[Expression, Type]]]:
+    ) -> tuple[list[str], dict[str, MypyFile] | None, dict[Expression, Type] | None]:
         try:
             result = build.build(
                 sources=[BuildSource("main", None, source)],

@@ -1,5 +1,7 @@
 """Tests for the mypy parser."""
 
+from __future__ import annotations
+
 import sys
 
 from pytest import skip
@@ -30,6 +32,7 @@ def test_parser(testcase: DataDrivenTestCase) -> None:
     The argument contains the description of the test case.
     """
     options = Options()
+    options.hide_error_codes = True
 
     if testcase.file.endswith("python310.test"):
         options.python_version = (3, 10)

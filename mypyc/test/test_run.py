@@ -1,5 +1,7 @@
 """Test cases for building an C extension and running it."""
 
+from __future__ import annotations
+
 import ast
 import contextlib
 import glob
@@ -8,11 +10,12 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Any, Iterator, List, cast
+import time
+from typing import Any, Iterator, cast
 
 from mypy import build
 from mypy.errors import CompileError
-from mypy.options import Options
+from mypy.options import TYPE_VAR_TUPLE, UNPACK, Options
 from mypy.test.config import test_temp_dir
 from mypy.test.data import DataDrivenTestCase
 from mypy.test.helpers import assert_module_equivalence, perform_file_operations
@@ -32,9 +35,12 @@ from mypyc.test.testutil import (
 )
 
 files = [
+    "run-async.test",
     "run-misc.test",
     "run-functions.test",
     "run-integers.test",
+    "run-i64.test",
+    "run-i32.test",
     "run-floats.test",
     "run-bools.test",
     "run-strings.test",
@@ -62,6 +68,9 @@ files.append("run-python37.test")
 if sys.version_info >= (3, 8):
     files.append("run-python38.test")
 
+if sys.version_info >= (3, 10):
+    files.append("run-match.test")
+
 setup_format = """\
 from setuptools import setup
 from mypyc.build import mypycify
@@ -75,7 +84,7 @@ setup(name='test_run_output',
 WORKDIR = "build"
 
 
-def run_setup(script_name: str, script_args: List[str]) -> bool:
+def run_setup(script_name: str, script_args: list[str]) -> bool:
     """Run a setup script in a somewhat controlled environment.
 
     This is adapted from code in distutils and our goal here is that is
@@ -164,6 +173,12 @@ class TestRun(MypycDataSuite):
             # new by distutils, shift the mtime of all of the
             # generated artifacts back by a second.
             fudge_dir_mtimes(WORKDIR, -1)
+            # On Ubuntu, changing the mtime doesn't work reliably. As
+            # a workaround, sleep.
+            #
+            # TODO: Figure out a better approach, since this slows down tests.
+            if sys.platform == "linux":
+                time.sleep(1.0)
 
             step += 1
             with chdir_manager(".."):
@@ -180,7 +195,9 @@ class TestRun(MypycDataSuite):
         options.python_version = sys.version_info[:2]
         options.export_types = True
         options.preserve_asts = True
+        options.allow_empty_bodies = True
         options.incremental = self.separate
+        options.enable_incomplete_feature = [TYPE_VAR_TUPLE, UNPACK]
 
         # Avoid checking modules/packages named 'unchecked', to provide a way
         # to test interacting with code we don't have types for.
@@ -295,6 +312,9 @@ class TestRun(MypycDataSuite):
             stderr=subprocess.STDOUT,
             env=env,
         )
+        if sys.version_info >= (3, 12):
+            # TODO: testDecorators1 hangs on 3.12, remove this once fixed
+            proc.wait(timeout=30)
         output = proc.communicate()[0].decode("utf8")
         outlines = output.splitlines()
 

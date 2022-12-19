@@ -1,15 +1,17 @@
 """Semantic analyzer test cases"""
 
+from __future__ import annotations
+
 import os.path
 import sys
-from typing import Dict, List
+from typing import Dict
 
 from mypy import build
 from mypy.defaults import PYTHON3_VERSION
 from mypy.errors import CompileError
 from mypy.modulefinder import BuildSource
 from mypy.nodes import TypeInfo
-from mypy.options import Options
+from mypy.options import TYPE_VAR_TUPLE, UNPACK, Options
 from mypy.test.config import test_temp_dir
 from mypy.test.data import DataDrivenTestCase, DataSuite
 from mypy.test.helpers import (
@@ -44,7 +46,7 @@ def get_semanal_options(program_text: str, testcase: DataDrivenTestCase) -> Opti
     options.semantic_analysis_only = True
     options.show_traceback = True
     options.python_version = PYTHON3_VERSION
-    options.enable_incomplete_features = True
+    options.enable_incomplete_feature = [TYPE_VAR_TUPLE, UNPACK]
     return options
 
 
@@ -130,7 +132,6 @@ def test_semanal_error(testcase: DataDrivenTestCase) -> None:
             alt_lib_path=test_temp_dir,
         )
         a = res.errors
-        assert a, f"No errors reported in {testcase.file}, line {testcase.line}"
     except CompileError as e:
         # Verify that there was a compile error and that the error messages
         # are equivalent.
@@ -217,9 +218,9 @@ class SemAnalTypeInfoSuite(DataSuite):
 
 class TypeInfoMap(Dict[str, TypeInfo]):
     def __str__(self) -> str:
-        a: List[str] = ["TypeInfoMap("]
+        a: list[str] = ["TypeInfoMap("]
         for x, y in sorted(self.items()):
-            if isinstance(x, str) and (
+            if (
                 not x.startswith("builtins.")
                 and not x.startswith("typing.")
                 and not x.startswith("abc.")

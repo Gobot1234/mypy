@@ -1,4 +1,4 @@
-from typing import List, Union
+from __future__ import annotations
 
 from mypy.erasetype import erase_typevars
 from mypy.nodes import TypeInfo
@@ -16,15 +16,15 @@ from mypy.types import (
 )
 
 
-def fill_typevars(typ: TypeInfo) -> Union[Instance, TupleType]:
+def fill_typevars(typ: TypeInfo) -> Instance | TupleType:
     """For a non-generic type, return instance type representing the type.
 
     For a generic G type with parameters T1, .., Tn, return G[T1, ..., Tn].
     """
-    tvs: List[Type] = []
+    tvs: list[Type] = []
     # TODO: why do we need to keep both typ.type_vars and typ.defn.type_vars?
     for i in range(len(typ.defn.type_vars)):
-        tv: Union[TypeVarLikeType, UnpackType] = typ.defn.type_vars[i]
+        tv: TypeVarLikeType | UnpackType = typ.defn.type_vars[i]
         # Change the line number
         if isinstance(tv, TypeVarType):
             tv = TypeVarType(
@@ -41,7 +41,14 @@ def fill_typevars(typ: TypeInfo) -> Union[Instance, TupleType]:
         elif isinstance(tv, TypeVarTupleType):
             tv = UnpackType(
                 TypeVarTupleType(
-                    tv.name, tv.fullname, tv.id, tv.upper_bound, tv.default, line=-1, column=-1
+                    tv.name,
+                    tv.fullname,
+                    tv.id,
+                    tv.upper_bound,
+                    tv.default,
+                    tv.tuple_fallback,
+                    line=-1,
+                    column=-1,
                 )
             )
         else:
@@ -63,7 +70,7 @@ def fill_typevars(typ: TypeInfo) -> Union[Instance, TupleType]:
     return typ.tuple_type.copy_modified(fallback=inst)
 
 
-def fill_typevars_with_any(typ: TypeInfo) -> Union[Instance, TupleType]:
+def fill_typevars_with_any(typ: TypeInfo) -> Instance | TupleType:
     """Apply a correct number of Any's as type arguments to a type."""
     inst = Instance(typ, [tv.default for tv in typ.defn.type_vars])
     if typ.tuple_type is None:

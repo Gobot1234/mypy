@@ -1,6 +1,6 @@
 """Maintain a mapping from mypy concepts to IR/compiled concepts."""
 
-from typing import Dict, Optional
+from __future__ import annotations
 
 from mypy.nodes import ARG_STAR, ARG_STAR2, GDEF, ArgKind, FuncDef, RefExpr, SymbolNode, TypeInfo
 from mypy.types import (
@@ -32,6 +32,8 @@ from mypyc.ir.rtypes import (
     bytes_rprimitive,
     dict_rprimitive,
     float_rprimitive,
+    int32_rprimitive,
+    int64_rprimitive,
     int_rprimitive,
     list_rprimitive,
     none_rprimitive,
@@ -53,12 +55,12 @@ class Mapper:
     compilation groups.
     """
 
-    def __init__(self, group_map: Dict[str, Optional[str]]) -> None:
+    def __init__(self, group_map: dict[str, str | None]) -> None:
         self.group_map = group_map
-        self.type_to_ir: Dict[TypeInfo, ClassIR] = {}
-        self.func_to_decl: Dict[SymbolNode, FuncDecl] = {}
+        self.type_to_ir: dict[TypeInfo, ClassIR] = {}
+        self.func_to_decl: dict[SymbolNode, FuncDecl] = {}
 
-    def type_to_rtype(self, typ: Optional[Type]) -> RType:
+    def type_to_rtype(self, typ: Type | None) -> RType:
         if typ is None:
             return object_rprimitive
 
@@ -96,6 +98,10 @@ class Mapper:
                     return RUnion([inst, object_rprimitive])
                 else:
                     return inst
+            elif typ.type.fullname == "mypy_extensions.i64":
+                return int64_rprimitive
+            elif typ.type.fullname == "mypy_extensions.i32":
+                return int32_rprimitive
             else:
                 return object_rprimitive
         elif isinstance(typ, TupleType):

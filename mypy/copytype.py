@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, cast
 
 from mypy.types import (
@@ -93,7 +95,7 @@ class TypeShallowCopier(TypeVisitor[ProperType]):
         return self.copy_common(t, dup)
 
     def visit_type_var_tuple(self, t: TypeVarTupleType) -> ProperType:
-        dup = TypeVarTupleType(t.name, t.fullname, t.id, t.upper_bound)
+        dup = TypeVarTupleType(t.name, t.fullname, t.id, t.upper_bound, t.tuple_fallback)
         return self.copy_common(t, dup)
 
     def visit_unpack_type(self, t: UnpackType) -> ProperType:

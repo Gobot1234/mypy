@@ -3,6 +3,8 @@
 These are slow -- do not add test cases unless you have a very good reason to do so.
 """
 
+from __future__ import annotations
+
 import glob
 import os
 import os.path
@@ -41,6 +43,9 @@ class TestCommandLine(MypycDataSuite):
         with open(program_path, "w") as f:
             f.write(text)
 
+        env = os.environ.copy()
+        env["PYTHONPATH"] = base_path
+
         out = b""
         try:
             # Compile program
@@ -49,6 +54,7 @@ class TestCommandLine(MypycDataSuite):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 cwd="tmp",
+                env=env,
             )
             if "ErrorOutput" in testcase.name or cmd.returncode != 0:
                 out += cmd.stdout

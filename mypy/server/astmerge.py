@@ -45,7 +45,9 @@ Discussion of some notable special cases:
 See the main entry point merge_asts for more details.
 """
 
-from typing import Dict, List, Optional, Tuple, TypeVar, cast
+from __future__ import annotations
+
+from typing import TypeVar, cast
 
 from mypy.nodes import (
     MDEF,
@@ -145,7 +147,7 @@ def merge_asts(
 
 def replacement_map_from_symbol_table(
     old: SymbolTable, new: SymbolTable, prefix: str
-) -> Dict[SymbolNode, SymbolNode]:
+) -> dict[SymbolNode, SymbolNode]:
     """Create a new-to-old object identity map by comparing two symbol table revisions.
 
     Both symbol tables must refer to revisions of the same module id. The symbol tables
@@ -153,14 +155,14 @@ def replacement_map_from_symbol_table(
     the given module prefix. Don't recurse into other modules accessible through the symbol
     table.
     """
-    replacements: Dict[SymbolNode, SymbolNode] = {}
+    replacements: dict[SymbolNode, SymbolNode] = {}
     for name, node in old.items():
         if name in new and (
             node.kind == MDEF or node.node and get_prefix(node.node.fullname) == prefix
         ):
             new_node = new[name]
             if (
-                type(new_node.node) == type(node.node)  # noqa
+                type(new_node.node) == type(node.node)  # noqa: E721
                 and new_node.node
                 and node.node
                 and new_node.node.fullname == node.node.fullname
@@ -178,7 +180,7 @@ def replacement_map_from_symbol_table(
 
 
 def replace_nodes_in_ast(
-    node: SymbolNode, replacements: Dict[SymbolNode, SymbolNode]
+    node: SymbolNode, replacements: dict[SymbolNode, SymbolNode]
 ) -> SymbolNode:
     """Replace all references to replacement map keys within an AST node, recursively.
 
@@ -202,7 +204,7 @@ class NodeReplaceVisitor(TraverserVisitor):
     replace all references to the old identities.
     """
 
-    def __init__(self, replacements: Dict[SymbolNode, SymbolNode]) -> None:
+    def __init__(self, replacements: dict[SymbolNode, SymbolNode]) -> None:
         self.replacements = replacements
 
     def visit_mypy_file(self, node: MypyFile) -> None:
@@ -211,8 +213,8 @@ class NodeReplaceVisitor(TraverserVisitor):
         super().visit_mypy_file(node)
 
     def visit_block(self, node: Block) -> None:
-        super().visit_block(node)
         node.body = self.replace_statements(node.body)
+        super().visit_block(node)
 
     def visit_func_def(self, node: FuncDef) -> None:
         node = self.fixup(node)
@@ -329,6 +331,8 @@ class NodeReplaceVisitor(TraverserVisitor):
 
     def visit_type_alias(self, node: TypeAlias) -> None:
         self.fixup_type(node.target)
+        for v in node.alias_tvars:
+            self.fixup_type(v)
         super().visit_type_alias(node)
 
     # Helpers
@@ -336,7 +340,7 @@ class NodeReplaceVisitor(TraverserVisitor):
     def fixup(self, node: SN) -> SN:
         if node in self.replacements:
             new = self.replacements[node]
-            skip_slots: Tuple[str, ...] = ()
+            skip_slots: tuple[str, ...] = ()
             if isinstance(node, TypeInfo) and isinstance(new, TypeInfo):
                 # Special case: special_alias is not exposed in symbol tables, but may appear
                 # in external types (e.g. named tuples), so we need to update it manually.
@@ -359,11 +363,11 @@ class NodeReplaceVisitor(TraverserVisitor):
             TypeState.reset_all_subtype_caches_for(new)
         return self.fixup(node)
 
-    def fixup_type(self, typ: Optional[Type]) -> None:
+    def fixup_type(self, typ: Type | None) -> None:
         if typ is not None:
             typ.accept(TypeReplaceVisitor(self.replacements))
 
-    def process_type_info(self, info: Optional[TypeInfo]) -> None:
+    def process_type_info(self, info: TypeInfo | None) -> None:
         if info is None:
             return
         self.fixup_type(info.declared_metaclass)
@@ -390,7 +394,7 @@ class NodeReplaceVisitor(TraverserVisitor):
             if node.node:
                 node.node.accept(self)
 
-    def replace_statements(self, nodes: List[Statement]) -> List[Statement]:
+    def replace_statements(self, nodes: list[Statement]) -> list[Statement]:
         result = []
         for node in nodes:
             if isinstance(node, SymbolNode):
@@ -407,7 +411,7 @@ class TypeReplaceVisitor(SyntheticTypeVisitor[None]):
     NodeReplaceVisitor.process_base_func.
     """
 
-    def __init__(self, replacements: Dict[SymbolNode, SymbolNode]) -> None:
+    def __init__(self, replacements: dict[SymbolNode, SymbolNode]) -> None:
         self.replacements = replacements
 
     def visit_instance(self, typ: Instance) -> None:
@@ -539,7 +543,7 @@ class TypeReplaceVisitor(SyntheticTypeVisitor[None]):
 
 
 def replace_nodes_in_symbol_table(
-    symbols: SymbolTable, replacements: Dict[SymbolNode, SymbolNode]
+    symbols: SymbolTable, replacements: dict[SymbolNode, SymbolNode]
 ) -> None:
     for name, node in symbols.items():
         if node.node:

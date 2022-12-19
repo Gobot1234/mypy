@@ -1,11 +1,10 @@
 import types
-from _typeshed import Self
+from _codecs import *
+from _typeshed import ReadableBuffer, Self
 from abc import abstractmethod
 from collections.abc import Callable, Generator, Iterable
 from typing import Any, BinaryIO, Protocol, TextIO
 from typing_extensions import Literal
-
-from _codecs import *
 
 __all__ = [
     "register",
@@ -75,7 +74,7 @@ class _Stream(_WritableStream, _ReadableStream, Protocol): ...
 # bytes is the raw form and str is the cooked form.
 # In the long run, both should become template parameters maybe?
 # There *are* bytes->bytes and str->str encodings in the standard library.
-# They are much more common in Python 2 than in Python 3.
+# They were much more common in Python 2 than in Python 3.
 
 class _Encoder(Protocol):
     def __call__(self, input: str, errors: str = ...) -> tuple[bytes, int]: ...  # signature of Codec().encode
@@ -173,7 +172,7 @@ class IncrementalDecoder:
     errors: str
     def __init__(self, errors: str = ...) -> None: ...
     @abstractmethod
-    def decode(self, input: bytes, final: bool = ...) -> str: ...
+    def decode(self, input: ReadableBuffer, final: bool = ...) -> str: ...
     def reset(self) -> None: ...
     def getstate(self) -> tuple[bytes, int]: ...
     def setstate(self, state: tuple[bytes, int]) -> None: ...
@@ -190,8 +189,8 @@ class BufferedIncrementalDecoder(IncrementalDecoder):
     buffer: bytes
     def __init__(self, errors: str = ...) -> None: ...
     @abstractmethod
-    def _buffer_decode(self, input: bytes, errors: str, final: bool) -> tuple[str, int]: ...
-    def decode(self, input: bytes, final: bool = ...) -> str: ...
+    def _buffer_decode(self, input: ReadableBuffer, errors: str, final: bool) -> tuple[str, int]: ...
+    def decode(self, input: ReadableBuffer, final: bool = ...) -> str: ...
 
 # TODO: it is not possible to specify the requirement that all other
 # attributes and methods are passed-through from the stream.

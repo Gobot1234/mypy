@@ -1,14 +1,16 @@
 """Type checker test cases"""
 
+from __future__ import annotations
+
 import os
 import re
 import sys
-from typing import Dict, List, Set, Tuple
 
 from mypy import build
 from mypy.build import Graph
 from mypy.errors import CompileError
 from mypy.modulefinder import BuildSource, FindModuleCache, SearchPaths
+from mypy.options import TYPE_VAR_TUPLE, UNPACK
 from mypy.semanal_main import core_modules
 from mypy.test.config import test_data_prefix, test_temp_dir
 from mypy.test.data import DataDrivenTestCase, DataSuite, FileOperation, module_from_path
@@ -25,7 +27,7 @@ from mypy.test.helpers import (
 )
 
 try:
-    import lxml  # type: ignore
+    import lxml  # type: ignore[import]
 except ImportError:
     lxml = None
 
@@ -42,6 +44,8 @@ if sys.version_info < (3, 9):
     typecheck_files.remove("check-python39.test")
 if sys.version_info < (3, 10):
     typecheck_files.remove("check-python310.test")
+if sys.version_info < (3, 11):
+    typecheck_files.remove("check-python311.test")
 
 # Special tests for platforms with case-insensitive filesystems.
 if sys.platform not in ("darwin", "win32"):
@@ -84,7 +88,7 @@ class TypeCheckSuite(DataSuite):
     def run_case_once(
         self,
         testcase: DataDrivenTestCase,
-        operations: List[FileOperation] = [],
+        operations: list[FileOperation] = [],
         incremental_step: int = 0,
     ) -> None:
         original_program_text = "\n".join(testcase.input)
@@ -109,7 +113,8 @@ class TypeCheckSuite(DataSuite):
         # Parse options after moving files (in case mypy.ini is being moved).
         options = parse_options(original_program_text, testcase, incremental_step)
         options.use_builtins_fixtures = True
-        options.enable_incomplete_features = True
+        if not testcase.name.endswith("_no_incomplete"):
+            options.enable_incomplete_feature = [TYPE_VAR_TUPLE, UNPACK]
         options.show_traceback = True
 
         # Enable some options automatically based on test file name.
@@ -118,7 +123,9 @@ class TypeCheckSuite(DataSuite):
         if "columns" in testcase.file:
             options.show_column_numbers = True
         if "errorcodes" in testcase.file:
-            options.show_error_codes = True
+            options.hide_error_codes = False
+        if "abstract" not in testcase.file:
+            options.allow_empty_bodies = not testcase.name.endswith("_no_empty")
 
         if incremental_step and options.incremental:
             # Don't overwrite # flags: --no-incremental in incremental test cases
@@ -208,8 +215,8 @@ class TypeCheckSuite(DataSuite):
 
     def verify_cache(
         self,
-        module_data: List[Tuple[str, str, str]],
-        a: List[str],
+        module_data: list[tuple[str, str, str]],
+        a: list[str],
         manager: build.BuildManager,
         graph: Graph,
     ) -> None:
@@ -234,7 +241,7 @@ class TypeCheckSuite(DataSuite):
         with open(cachedir_tag) as f:
             assert f.read().startswith("Signature: 8a477f597d28d172789f06886806bc55")
 
-    def find_error_message_paths(self, a: List[str]) -> Set[str]:
+    def find_error_message_paths(self, a: list[str]) -> set[str]:
         hits = set()
         for line in a:
             m = re.match(r"([^\s:]+):(\d+:)?(\d+:)? (error|warning|note):", line)
@@ -243,12 +250,12 @@ class TypeCheckSuite(DataSuite):
                 hits.add(p)
         return hits
 
-    def find_module_files(self, manager: build.BuildManager) -> Dict[str, str]:
+    def find_module_files(self, manager: build.BuildManager) -> dict[str, str]:
         return {id: module.path for id, module in manager.modules.items()}
 
     def find_missing_cache_files(
-        self, modules: Dict[str, str], manager: build.BuildManager
-    ) -> Set[str]:
+        self, modules: dict[str, str], manager: build.BuildManager
+    ) -> set[str]:
         ignore_errors = True
         missing = {}
         for id, path in modules.items():
@@ -259,7 +266,7 @@ class TypeCheckSuite(DataSuite):
 
     def parse_module(
         self, program_text: str, incremental_step: int = 0
-    ) -> List[Tuple[str, str, str]]:
+    ) -> list[tuple[str, str, str]]:
         """Return the module and program names for a test case.
 
         Normally, the unit tests will parse the default ('__main__')
